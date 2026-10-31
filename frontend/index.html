@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pothole Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: calc(40px + env(safe-area-inset-top)) 20px 48px; }
+  .mark { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; }
+  .mark svg { flex: none; }
+  .mark h1 { font-size: clamp(40px, 9vw, 64px); letter-spacing: .01em; }
+  .mark p { margin: 4px 0 0; color: var(--ink-2); }
+  .choices { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .choice {
+    display: block; text-decoration: none; color: var(--ink); padding: 22px 20px 20px;
+    background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius-l);
+    border-left: 6px solid var(--cone);
+  }
+  .choice:hover { background: var(--asphalt-3); }
+  .choice h2 { font-size: 34px; margin-bottom: 8px; }
+  .choice p { margin: 0; color: var(--ink-2); }
+  .choice.driver { border-left-color: var(--sev-low); }
+  .admin { margin-top: 40px; padding-top: 22px; border-top: 1px dashed var(--line); }
+  .admin h3 { font-size: 22px; margin-bottom: 6px; }
+  .admin-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+  #procStatus { color: var(--ink-2); font-size: 14px; }
+</style>
+</head>
+<body><a href="/system" style="display:block;padding:15px">System & Models</a>
+<main>
+  <div class="mark">
+    <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+      <rect x="2" y="2" width="52" height="52" rx="10" fill="#31404b" stroke="#52646f"/>
+      <path d="M28 6v10M28 22v10M28 38v12" stroke="#f2c230" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="17" cy="34" rx="8" ry="4.5" fill="#1b2329" stroke="#ff7a1a" stroke-width="2.5"/>
+    </svg>
+    <div>
+      <h1>Pothole Cloud</h1>
+      <p>Find potholes, map them, warn drivers.</p>
+    </div>
+  </div>
+
+  <div class="choices">
+    <a class="choice" href="/scanner">
+      <h2>Scan roads</h2>
+      <p>For survey staff. Mount the phone, start the camera and drive. Potholes are saved with their location.</p>
+    </a>
+    <a class="choice driver" href="/driver">
+      <h2>Drive</h2>
+      <p>See potholes on the map, plan a route and get warned before you reach one.</p>
+    </a>
+  </div>
+
+  <section class="admin" aria-labelledby="adminTitle">
+    <h3 id="adminTitle">Process new sightings</h3>
+    <p class="hint">Runs the post-process notebook: finds each pothole's real location, merges repeats and scores them with the local SLM.</p>
+    <div class="admin-row">
+      <button class="btn btn-primary" id="procBtn">Run post-processing</button>
+      <span id="procStatus" aria-live="polite">Checking…</span>
+    </div>
+  </section>
+</main>
+<script>
+const btn = document.getElementById('procBtn');
+const out = document.getElementById('procStatus');
+let timer = null;
+
+async function refresh() {
+  try {
+    const s = await (await fetch('/process/status')).json();
+    const names={missing_heading:'Missing camera/driving direction',poor_gps:'GPS accuracy too poor',unprojectable_box:'Box cannot be projected onto the road — check camera tilt/horizon',too_far:'Estimated distance exceeds the location limit',invalid_metadata:'Missing or invalid image/camera metadata',invalid_coordinates:'Invalid GPS coordinates',invalid_camera_settings:'Invalid camera settings',invalid_box:'Invalid detection box'};
+    const waiting = s.new_detections == null ? `${s.unprocessed_detections} pending sightings` : `${s.new_detections} not yet processed · ${s.deferred_detections} deferred`;
+    let details=document.getElementById('processingDetails');
+    if(!details){details=document.createElement('div');details.id='processingDetails';details.style.cssText='margin-top:16px;padding:16px;border:1px solid #718196;border-radius:10px;line-height:1.7';out.parentElement.append(details)}
+    details.replaceChildren();
+    for(const [reason,count] of Object.entries(s.deferred_reasons||{})){const line=document.createElement('p');line.textContent=`${count}: ${names[reason]||reason}`;details.append(line)}
+    if(s.map_records){const line=document.createElement('p');line.textContent=`Map records: ${s.map_records.open||0} confirmed · ${s.map_records.unconfirmed||0} awaiting more sightings`;details.append(line)}
+    if(s.deferred_detections){const line=document.createElement('p');line.textContent='Deferred sightings were retained. Re-running with unchanged metadata may leave the same count. These counts do not establish detector accuracy.';details.append(line)}
+    if (s.state === 'running') { out.textContent = `Running… ${waiting}`; btn.disabled = true; return true; }
+    btn.disabled = false;
+    if (s.state === 'failed') out.textContent = `Last run failed: ${s.error}. ${waiting}.`;
+    else if (s.state === 'done') out.textContent = `Last run finished ${new Date(s.finished).toLocaleTimeString()}. ${waiting}.`;
+    else out.textContent = `${waiting}.`;
+  } catch { out.textContent = 'Server not reachable.'; }
+  return false;
+}
+
+btn.addEventListener('click', async () => {
+  btn.disabled = true;
+  await fetch('/process', { method: 'POST' });
+  clearInterval(timer);
+  timer = setInterval(async () => { if (!(await refresh())) clearInterval(timer); }, 2000);
+  refresh();
+});
+refresh();
+</script>
+</body>
+</html>

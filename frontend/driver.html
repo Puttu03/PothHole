@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drive · Pothole Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  body { overflow: hidden; }
+  #map { position: fixed; inset: 0; background: var(--asphalt); }
+  .leaflet-container { font-family: var(--font-body); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--asphalt-2); color: var(--ink); }
+  .leaflet-popup-content { margin: 12px; min-width: 220px; }
+  .pop img { width: 100%; border-radius: var(--radius-s); display: block; margin-bottom: 8px; background: #000; }
+  .pop p { margin: 6px 0; }
+  .pop .meta { color: var(--ink-2); font-size: 13px; }
+  .pop .row { display: flex; gap: 8px; margin-top: 10px; }
+  .pop .btn { padding: 6px 10px; font-size: 14px; }
+
+  /* the alert: a road sign that counts down */
+  .alert {
+    position: fixed; z-index: 1100; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top));
+    display: none; grid-template-columns: 76px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 14px 10px 10px; border-radius: var(--radius-l);
+    background: var(--asphalt-2); border: 2px solid var(--sev, var(--cone));
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+  }
+  .alert.show { display: grid; }
+  .alert img { width: 76px; height: 76px; object-fit: cover; border-radius: var(--radius-s); background: #000; }
+  .alert .what { min-width: 0; }
+  .alert .what p { margin: 4px 0 0; font-size: 15px; line-height: 1.3; color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .alert .dist { font: 700 60px/0.9 var(--font-sign); color: var(--sev, var(--cone)); text-align: right; font-variant-numeric: tabular-nums; }
+  .alert .dist small { font-size: 26px; margin-left: 2px; }
+
+  .panel {
+    position: fixed; z-index: 1000; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
+    background: var(--asphalt-2); border: 1px solid var(--line); border-radius: var(--radius-l);
+    padding: 12px; display: grid; gap: 10px;
+  }
+  .panel-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .panel-row .grow { flex: 1; min-width: 0; }
+  #routeMsg { margin: 0; font-size: 15px; }
+  #routeMsg b { font-family: var(--font-sign); font-size: 22px; font-weight: 700; }
+  .round { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
+  .round.on { background: var(--cone); border-color: var(--cone); color: #1d1206; }
+  @media (min-width: 720px) { .panel { left: auto; width: 420px; } .alert { left: auto; width: 520px; } }
+  .toast { bottom: calc(150px + env(safe-area-inset-bottom)); width: min(92vw, 420px); }
+  .toast .panel-row { flex-wrap: nowrap; }
+  .toast .btn { flex: 1; }
+  .me { width: 18px; height: 18px; border-radius: 50%; background: #4aa3ff; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(74, 163, 255, .25); }
+</style>
+<link rel="stylesheet" href="/static/drive.css?v=india5"></head>
+<body>
+<aside id="searchPanel"><button id="plannerToggle" class="planner-toggle" aria-expanded="false" aria-controls="plannerContent"><span class="handle"></span><span id="plannerTitle">Where do you want to go?</span><span id="plannerArrow">⌃</span></button><div id="plannerContent" class="planner-content"><h1>RoadPlotter <small>Drive</small></h1><p>Find a route. Know the road ahead.</p>
+<label for="startSearch">Starting point</label><div class="searchRow"><input id="startSearch" placeholder="Place, city — e.g. NIE North, Mysuru"><button id="searchStart">Search</button></div>
+<button id="useLocation">Use my location</button>
+<label for="endSearch">Destination</label><div class="searchRow"><input id="endSearch" placeholder="Where do you want to go?"><button id="searchEnd">Search</button></div>
+<div class="pin-actions"><button id="dropStart" type="button">📍 Drop start pin</button><button id="dropEnd" type="button">📍 Drop destination pin</button><button id="cancelPin" type="button" hidden>Cancel pin placement</button></div><div id="searchResults" aria-live="polite"></div><button id="findRoutes">Find driving routes</button>
+<p id="searchMessage" role="status"></p><div id="routeChoices"></div><div style="display:flex;flex-wrap:wrap;gap:8px"><span><img src="/static/icons/pothole.svg" width="24" height="24" alt="" style="vertical-align:middle">Pothole</span><span><img src="/static/icons/longitudinal_crack.svg" width="24" height="24" alt="" style="vertical-align:middle">Longitudinal crack</span><span><img src="/static/icons/transverse_crack.svg" width="24" height="24" alt="" style="vertical-align:middle">Transverse crack</span><span><img src="/static/icons/alligator_crack.svg" width="24" height="24" alt="" style="vertical-align:middle">Alligator crack</span><span><img src="/static/icons/road_damage.svg" width="24" height="24" alt="" style="vertical-align:middle">Unspecified road damage</span></div>
+<button id="shareDrive">Copy drive-only link</button><p class="credit">Search: Photon / OpenStreetMap. Routes: OSRM. Alternatives depend on road coverage. Counts reflect recorded potholes, not guaranteed road safety.</p></div></aside>
+<div id="map" aria-label="Pothole map"></div>
+
+<div class="alert" id="alert" role="alert" aria-live="assertive">
+  <img id="aImg" alt="">
+  <div class="what">
+    <span class="sev-chip" id="aSev">High</span>
+    <p id="aDesc">Pothole ahead</p>
+  </div>
+  <div class="dist"><span id="aDist">100</span><small>m</small></div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="panel-row">
+    <p id="routeMsg" class="grow">Loading potholes near you…</p>
+    <button class="btn round on" id="followBtn" aria-pressed="true" title="Follow my location" aria-label="Follow my location">◎</button>
+    <button class="btn round" id="setBtn" title="Settings" aria-label="Alert settings">⚙</button>
+  </div>
+  <div class="panel-row" id="routeActions">
+    <button class="btn btn-primary" id="planBtn">Plan a route</button>
+    <button class="btn" id="myLocBtn" hidden>Start from my location</button>
+    <button class="btn btn-ghost" id="clearBtn" hidden>Clear route</button>
+  </div>
+</div>
+
+<div class="drawer" id="settings" role="dialog" aria-labelledby="setTitle">
+  <div class="drawer-head">
+    <h2 id="setTitle" style="font-size:28px">Alerts</h2>
+    <button class="btn" id="closeSettings">Done</button>
+  </div>
+  <div class="drawer-grid">
+    <div class="field"><label for="sThreshold">Warn me from</label>
+      <select id="sThreshold"><option value="50">50 m</option><option value="100">100 m</option><option value="200">200 m</option></select></div>
+    <div class="field"><label for="sMinSev">Warn for</label>
+      <select id="sMinSev"><option value="Low">All potholes</option><option value="Medium">Medium and worse</option><option value="High">High and Critical</option><option value="Critical">Critical only</option></select></div>
+    <div class="field"><label for="sBeep">Beep</label>
+      <select id="sBeep"><option value="1">On</option><option value="0">Off</option></select></div>
+    <div class="field"><label for="sVoice">Voice</label>
+      <select id="sVoice"><option value="1">On</option><option value="0">Off</option></select></div>
+    <p class="hint wide">Keep the screen on while driving. Don't touch the phone on the move: alerts are big and spoken so you don't have to.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status">
+  <p style="margin:0 0 10px">Was the road damage still there?</p>
+  <div class="panel-row">
+    <button class="btn" data-fb="still_there">Still there</button>
+    <button class="btn" data-fb="gone">Gone</button>
+    <button class="btn btn-ghost" data-fb="">Skip</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/static/driver.js?v=pins6"></script><script src="/static/drive-mobile.js?v=3"></script>
+</body>
+</html>
