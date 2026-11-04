@@ -210,6 +210,8 @@ def _run_notebook():
             str(settings.NOTEBOOK_DIR / "02_postprocess.ipynb"), str(out),
             cwd=str(settings.NOTEBOOK_DIR), progress_bar=False,
         )
+        from .drive_publish import publish
+        publish()
         _job.update(state="done", output=str(out))
     except Exception as e:
         log.exception("post-process failed")
@@ -233,10 +235,7 @@ def start_process():
 def process_status():
     with db.session() as conn:
         pending = conn.execute("SELECT COUNT(*) FROM detections WHERE processed=0").fetchone()[0]
-        deferred_rows = conn.execute("SELECT process_note, COUNT(*) FROM detections WHERE processed=0 AND process_note IS NOT NULL GROUP BY process_note").fetchall()
-        deferred = {row[0]: row[1] for row in deferred_rows}
-        states = {row[0]: row[1] for row in conn.execute('SELECT status, COUNT(*) FROM potholes GROUP BY status')}
-    return {**_job, "unprocessed_detections": pending, "new_detections": pending-sum(deferred.values()), "deferred_detections":sum(deferred.values()), "deferred_reasons":deferred, "map_records":states}
+    return {**_job, "unprocessed_detections": pending}
 
 
 # ---------------------------------------------------------------- driver data
@@ -312,12 +311,11 @@ async def drive_search(q: str = Query(..., min_length=3, max_length=160)):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.get('https://photon.komoot.io/api/', params={'q':q,'limit':10,'lang':'en','bbox':'68,6,98,38'})
+            r = await client.get('https://photon.komoot.io/api/', params={'q':q,'limit':5})
             r.raise_for_status()
         results=[]
         for feature in r.json().get('features',[]):
             props=feature['properties']; lon,lat=feature['geometry']['coordinates'][:2]
-            if str(props.get('countrycode','')).lower() not in ('in','ind'):continue
             label=', '.join(dict.fromkeys(str(props[k]) for k in ('name','street','city','state','country') if props.get(k)))
             results.append({'label':label,'lat':lat,'lon':lon})
         return {'results':results}
@@ -329,7 +327,7 @@ async def search_fallback(q: str = Query(...,min_length=3,max_length=160)):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            response=await client.get('https://nominatim.openstreetmap.org/search',params={'q':q,'format':'json','limit':5,'countrycodes':'in','accept-language':'en'},headers={'User-Agent':'RoadPlotter-local-prototype/1.0'})
+            response=await client.get('https://nominatim.openstreetmap.org/search',params={'q':q,'format':'json','limit':5},headers={'User-Agent':'RoadPlotter-local-prototype/1.0'})
             response.raise_for_status()
         return {'results':[{'label':p['display_name'],'lat':float(p['lat']),'lon':float(p['lon'])} for p in response.json()]}
     except Exception as error:

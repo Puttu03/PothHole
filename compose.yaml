@@ -1,0 +1,29 @@
+services:
+  drive:
+    build: ./drive
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8000"
+    volumes:
+      - ./drive_public:/app/data:ro
+      - drive_feedback:/app/feedback
+    environment:
+      DRIVE_FEEDBACK_DIR: /app/feedback
+      OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}
+      PHOTON_URL: ${PHOTON_URL:-https://photon.komoot.io/api/}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: [public]
+    command: tunnel --no-autoupdate --url http://drive:8000
+    restart: unless-stopped
+    depends_on:
+      drive:
+        condition: service_healthy
+
+volumes:
+  drive_feedback:

@@ -1,0 +1,30 @@
+body{font-family:Arial,sans-serif}#searchPanel{position:fixed;z-index:1050;left:16px;top:16px;width:360px;max-height:calc(100vh - 210px);overflow:auto;background:white;color:#202124;padding:22px;border-radius:18px;box-shadow:0 3px 18px #0003}#searchPanel h1{font-size:24px;margin:0 0 8px}#searchPanel small{color:#1967d2;font-size:16px}#searchPanel p{font-size:14px;color:#60656c}#searchPanel label{display:block;margin:16px 0 6px;font-size:13px;font-weight:bold}.searchRow{display:flex;gap:6px}#searchPanel input{min-width:0;width:100%;background:#f1f3f4;border:1px solid #ddd;color:#202124;padding:12px;border-radius:8px}#searchPanel button{background:#e8f0fe;color:#174ea6;border:0;border-radius:8px;padding:11px;cursor:pointer;margin:5px 0;text-align:left}#findRoutes{width:100%;background:#1967d2!important;color:white!important;text-align:center!important}#searchResults button,#routeChoices button{display:block;width:100%}#routeChoices button.selected{outline:2px solid #1967d2}.credit{font-size:11px!important}.panel{background:white;color:#202124}.panel .btn{color:#1967d2;background:#e8f0fe}.leaflet-control-attribution{font-size:10px}@media(max-width:720px){#searchPanel{left:8px;top:8px;width:calc(100% - 16px);box-sizing:border-box;max-height:43vh;padding:14px}.alert{top:46vh}.panel{max-height:20vh}.credit{display:none}}
+/* Responsive planner; desktop retains the side panel. */
+.planner-toggle{display:none!important}#searchPanel,#searchPanel *{box-sizing:border-box}#searchPanel input,#searchPanel button{font-size:14px;min-height:44px}#searchPanel input{font-size:16px}.searchRow button{flex-shrink:0}.planner-content{min-width:0}.panel #routeMsg{color:#26384b}#searchPanel .planner-content>div[style]{font-size:12px;gap:10px!important}#routeChoices button{white-space:normal;line-height:1.5}#searchMessage:empty{display:none}
+@media(max-width:720px){
+ :root{--drive-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+ #searchPanel{top:auto;left:0;right:0;bottom:0;width:100%;max-height:none;border-radius:22px 22px 0 0;padding:0 16px env(safe-area-inset-bottom,0px);overflow:hidden;z-index:1100;box-shadow:0 -4px 24px #17283a26}
+ #searchPanel .planner-toggle{display:flex!important;position:relative;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;background:#fff;color:#203248;border-radius:0;padding:23px 4px 15px;min-height:70px;font-weight:700;text-align:left}
+ .handle{position:absolute;top:8px;left:calc(50% - 18px);width:36px;height:4px;border-radius:4px;background:#ced6df}
+ .planner-content{display:none;max-height:calc(66dvh - 70px);max-height:calc(66vh - 70px);overflow-y:auto;overscroll-behavior:contain;padding:0 0 18px;scroll-padding-bottom:20px;-webkit-overflow-scrolling:touch}
+ #searchPanel.expanded .planner-content{display:block}
+ #searchPanel h1,#searchPanel h1+p{display:none}#searchPanel label{margin-top:12px}#searchPanel .credit{display:none}
+ #searchPanel.expanded{max-height:70vh;max-height:70dvh}
+ .panel{left:12px!important;right:12px!important;top:calc(12px + env(safe-area-inset-top,0px));bottom:auto!important;width:auto!important;max-height:none;border-radius:15px;padding:10px 12px;gap:5px;z-index:1000;box-shadow:0 3px 15px #0002}
+ .panel-row{gap:7px}.panel #routeMsg{font-size:13px;line-height:1.35}.panel #routeMsg b{font-size:18px}.panel .round{width:40px;height:40px;min-height:40px}.panel #planBtn{font-size:13px;padding:8px 12px}.panel #clearBtn,.panel #myLocBtn{font-size:12px;padding:8px}
+ .alert{top:calc(140px + env(safe-area-inset-top,0px))!important;left:12px!important;right:12px!important;width:auto!important;grid-template-columns:48px 1fr auto;padding:10px;gap:9px;z-index:1050;border-radius:12px}
+ .alert img{width:48px;height:48px}.alert .dist{font-size:36px}.alert .dist small{font-size:18px}.alert .what p{font-size:12px}.alert .sev-chip{font-size:11px}
+ .toast{bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:1200;width:calc(100% - 24px);max-width:420px}
+ body.planner-open .toast{bottom:auto;top:calc(140px + env(safe-area-inset-top,0px))}
+ .drawer{z-index:1400!important;max-height:85vh;overflow-y:auto}
+ .leaflet-control-attribution{max-width:65vw;font-size:9px!important}.leaflet-bottom{bottom:var(--drive-bottom)}
+}
+@media(max-width:720px) and (max-height:500px){.planner-content{max-height:45vh}#searchPanel.expanded{max-height:65vh}.alert{top:100px!important}.panel{right:45%!important}#routeActions{display:none}}
+
+@media(max-width:720px){#gpsStatus{max-height:54px;overflow:auto}.alert{top:calc(185px + env(safe-area-inset-top,0px))!important}#enableLocationBtn{font-size:12px;padding:8px;min-height:40px}}
+
+@media(max-width:720px){#searchPanel .planner-content>div[style],#shareDrive{display:none}.panel #routeMsg{font-size:12px}.panel{padding:8px 10px}.panel .round{width:34px;height:34px;min-height:34px}.planner-content{max-height:52dvh!important}.searchRow{display:grid;grid-template-columns:minmax(0,1fr) 70px}#searchPanel input{padding:10px}#searchPanel .searchRow button{padding:8px;font-size:12px}.panel #routeActions{gap:6px}.panel #routeActions button{font-size:12px;padding:7px 10px}}
+
+#searchResults{max-height:240px;overflow-y:auto;overscroll-behavior:contain}#searchResults button{background:#f5f8fc;border:1px solid #dbe4f0;border-radius:9px;padding:10px 12px;font-size:13px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;text-align:left;margin:6px 0}#searchResults button:focus-visible{outline:3px solid #84adff}@media(max-width:720px){#searchResults{max-height:190px}#searchResults button{font-size:13px;min-height:44px}}
+
+.pin-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.pin-actions button{flex:1;min-width:130px}#cancelPin{background:#fff2e5!important;color:#8e4908!important}
